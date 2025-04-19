@@ -7,19 +7,26 @@ extern iTJSDispatch2 * TVPCreateNativeClass_KAGParser();
 #define EXPORT(hr) extern "C" __declspec(dllexport) hr __stdcall
 
 #ifdef _MSC_VER
-#pragma comment(linker, "/EXPORT:V2Link=_V2Link@4")
-#pragma comment(linker, "/EXPORT:V2Unlink=_V2Unlink@0")
+// アーキテクチャ別にエクスポート名を分岐
+  #ifdef _WIN64
+    #pragma comment(linker, "/EXPORT:V2Link=V2Link")
+    #pragma comment(linker, "/EXPORT:V2Unlink=V2Unlink")
+  #else
+    #pragma comment(linker, "/EXPORT:V2Link=_V2Link@4")
+    #pragma comment(linker, "/EXPORT:V2Unlink=_V2Unlink@0")
+  #endif
 #endif
 
-int WINAPI DllEntryPoint(HINSTANCE hinst, unsigned long reason, void* lpReserved)
+// DllMain
+BOOL WINAPI DllEntryPoint(HINSTANCE hinst, DWORD reason, LPVOID reserved)
 {
-	return 1;
+	return TRUE;
 }
 
 static iTJSDispatch2 *origKAGParser = NULL;
+static tjs_int GlobalRefCountAtInit = 0;
 
 //---------------------------------------------------------------------------
-static tjs_int GlobalRefCountAtInit = 0;
 EXPORT(HRESULT) V2Link(iTVPFunctionExporter *exporter)
 {
 	TVPInitImportStub(exporter);
