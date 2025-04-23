@@ -1,69 +1,48 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(ExtKAGParser LANGUAGES CXX)
+# UTF-8 source
+add_compile_options("$<$<AND:$<C_COMPILER_ID:MSVC>,$<COMPILE_LANGUAGE:C>>:/utf-8>")
+add_compile_options("$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<COMPILE_LANGUAGE:CXX>>:/utf-8>")
+add_compile_options("$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<COMPILE_LANGUAGE:CXX>>:/Zc:__cplusplus>")
 
-# UTF-8 support for MSVC
-if(MSVC)
-  add_compile_options(
-    "$<$<COMPILE_LANGUAGE:C>:/utf-8>"
-    "$<$<COMPILE_LANGUAGE:CXX>:/utf-8>"
-    "$<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>"
-  )
+# MSVC static runtime
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+set(PROJECT_NAME ExtKAGParser)
+set(PROJECT_VERSION 1.00)
+
+project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} LANGUAGES CXX)
+
+# tp_stub をサブディレクトリとして追加
+if(NOT TARGET tp_stub)
+    add_subdirectory(../tp_stub ${CMAKE_CURRENT_BINARY_DIR}/tp_stub)
 endif()
 
-# Set output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
-# Define the source and header files
-set(SOURCES
-  src/KAGParser.cpp
-  src/Main.cpp
-  src/TJSAry.cpp
-  src/TJSDic.cpp
-  src/tp_stub.cpp
+# ソースファイル
+add_library(${PROJECT_NAME} SHARED
+    src/KAGParser.cpp
+    src/Main.cpp
+    src/TJSAry.cpp
+    src/TJSDic.cpp
+    src/KAGParser.rc
 )
 
-set(HEADERS
-  src/TJSAry.h
-  src/TJSDic.h
-  src/ExtKAGParser.h
-  src/KAGParser.h
-  src/tjsHashSearch.h
-  src/tp_stub.h
+# インクルードディレクトリ（必要なら追加）
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-set(RESOURCES
-  src/KAGParser.rc
+# 定義
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    WIN32
+    _WINDOWS
+    _USRDLL
+    EXTKAGPARSER_EXPORTS
+    $<$<CONFIG:Debug>:_DEBUG>
+    $<$<CONFIG:Release>:NDEBUG>
 )
 
-# Create shared library
-add_library(ExtKAGParser SHARED
-  ${SOURCES}
-  ${HEADERS}
-  ${RESOURCES}
+# ライブラリリンク
+target_link_libraries(${PROJECT_NAME} PUBLIC
+    tp_stub
 )
-
-# Preprocessor definitions
-target_compile_definitions(ExtKAGParser PRIVATE
-  WIN32
-  _WINDOWS
-  _USRDLL
-  EXTKAGPARSER_EXPORTS
-  $<$<CONFIG:Debug>:_DEBUG>
-  $<$<CONFIG:Release>:NDEBUG>
-)
-
-# Use /MT instead of /MD for MSVC
-if(MSVC)
-  foreach(flag_var
-      CMAKE_C_FLAGS_DEBUG
-      CMAKE_C_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_DEBUG
-      CMAKE_CXX_FLAGS_RELEASE)
-    string(REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-  endforeach()
-
-  target_compile_options(ExtKAGParser PRIVATE /W3)
-endif()
